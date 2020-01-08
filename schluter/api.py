@@ -2,6 +2,8 @@ import logging
 import json
 from requests import request, Session
 
+from schluter.thermostat import Thermostat
+
 API_BASE_URL = "https://ditra-heat-e-wifi.schluter.com"
 API_AUTH_URL = API_BASE_URL + "/api/authenticate/user"
 API_GET_THERMOSTATS_URL = API_BASE_URL + "/api/thermostats"
@@ -28,14 +30,15 @@ class Api:
         return response
     
     def get_thermostats(self, sessionId):
-        thermostats = self._call_api( "get", API_GET_THERMOSTATS_URL, sessionId).json()
+        thermostats = self._call_api("get", API_GET_THERMOSTATS_URL, sessionId).json()
         groups = thermostats["Groups"]
 
         thermostat_list = []
         for group in groups:
-            thermostat_list.append(group["Thermostats"])
+            for thermostat in group["Thermostats"]:
+                thermostat_list.append(Thermostat(thermostat))
 
-        return json.dumps(thermostat_list)
+        return thermostat_list
 
     def _call_api(self, method, url, sessionId = None, **kwargs):
         payload = kwargs.get("params") or kwargs.get("json")
@@ -45,7 +48,7 @@ class Api:
         
         _LOGGER.debug("Calling %s with payload=%s", url, payload)
 
-        response = self._http_session.request(method, url, **kwargs) if\
+        response = self._http_session.request(method, url, params = { 'sessionId': sessionId }, **kwargs) if\
             self._http_session is not None else\
             request(method, url, params = { 'sessionId': sessionId }, **kwargs)
 
