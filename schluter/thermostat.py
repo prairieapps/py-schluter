@@ -13,6 +13,7 @@ class Thermostat():
         self._min_temp = data["MinTemp"]
         self._kwh_charge = data["KwhCharge"]
         self._load_measured_watt = data["LoadMeasuredWatt"]
+        self._sw_version = data["SWVersion"]
     
     @property
     def serial_number(self):
@@ -65,3 +66,7 @@ class Thermostat():
     @property
     def load_measured_watt(self):
         return self._load_measured_watt
+
+    @property
+    def sw_version(self):
+        return self._sw_version
