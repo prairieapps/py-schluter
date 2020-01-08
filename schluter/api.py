@@ -23,7 +23,7 @@ class Api:
                 'Email': email, 
                 'Password': password, 
                 'Application': API_APPLICATION_ID
-            }).json()
+            })
 
         return response
     
