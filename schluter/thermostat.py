@@ -33,15 +33,15 @@ class Thermostat():
     
     @property
     def temperature(self):
-        return self._temperature
+        return round((self._temperature / 100) * 2) / 2 
 
     @property
     def set_point_temp(self):
-        return self._set_point_temp
+        return round((self._set_point_temp / 100) * 2) / 2 
     
     @property
     def manual_temp(self):
-        return self._manual_temp
+        return round((self._manual_temp / 100) * 2) / 2
     
     @property
     def is_online(self):
@@ -53,11 +53,11 @@ class Thermostat():
     
     @property
     def max_temp(self):
-        return self._max_temp
+        return round((self._max_temp / 100) * 2) / 2
     
     @property
     def min_temp(self):
-        return self._min_temp
+        return round((self._min_temp / 100) * 2) / 2
     
     @property
     def kwh_charge(self):
