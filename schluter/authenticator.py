@@ -2,6 +2,7 @@ import os
 import json
 import logging
 from enum import Enum
+from datetime import datetime, timedelta
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -12,6 +13,7 @@ def to_authentication_json(authentication):
     return json.dumps({
         "session_id": authentication.session_id,
         "state": authentication.state.value,
+        "expires": authentication.expires.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
     })
 
 def from_authentication_json(data):
@@ -20,7 +22,8 @@ def from_authentication_json(data):
 
     session_id = data["session_id"]
     state = AuthenticationState(data["state"])
-    return Authentication(state, session_id)
+    expires = data["expires"]
+    return Authentication(state, session_id, expires)
 
 class AuthenticationState(Enum):
     REQUIRES_AUTHENTICATION = "requires_authentication"
@@ -29,13 +32,18 @@ class AuthenticationState(Enum):
     BAD_PASSWORD = "bad_password"
 
 class Authentication:
-    def __init__(self, state, session_id = None):
+    def __init__(self, state, session_id = None, expires = None):
         self._state = state
-        self._session_id = session_id
+        self._session_id = session_id,
+        self._expires = expires
 
     @property
     def session_id(self):
         return self._session_id
+
+    @property
+    def expires(self):
+        return self._expires
 
     @property
     def state(self):
@@ -59,6 +67,15 @@ class Authenticator:
                 try:
                     self._authentication = from_authentication_json(
                         json.load(file))
+                    token_expired = datetime.strptime(
+                        self._authentication.expires,
+                        '%Y-%m-%dT%H:%M:%S.%fZ'
+                    ) - datetime.utcnow()
+                    
+                    if token_expired < timedelta(
+                            seconds=0):
+                        _LOGGER.error("Token has expired.")
+                        self._authentication = Authentication(AuthenticationState.REQUIRES_AUTHENTICATION)
                     return
                 except json.decoder.JSONDecodeError as error:
                     _LOGGER.error("Unable to read cache file (%s): %s",
@@ -74,6 +91,7 @@ class Authenticator:
 
         data = response.json()
         session_id = data["SessionId"]
+        expires = datetime.utcnow() + timedelta(hours=1)
 
         if data["ErrorCode"] == 2:
             state = AuthenticationState.BAD_PASSWORD
@@ -82,7 +100,7 @@ class Authenticator:
         else:
             state = AuthenticationState.AUTHENTICATED
         
-        self._authentication = Authentication(state, session_id)
+        self._authentication = Authentication(state, session_id, expires)
 
         if state == AuthenticationState.AUTHENTICATED:
             self._cache_authentication(self._authentication)
