@@ -7,6 +7,7 @@ from schluter.thermostat import Thermostat
 API_BASE_URL = "https://ditra-heat-e-wifi.schluter.com"
 API_AUTH_URL = API_BASE_URL + "/api/authenticate/user"
 API_GET_THERMOSTATS_URL = API_BASE_URL + "/api/thermostats"
+API_SET_TEMPERATURE_URL = API_BASE_URL + "/api/thermostat"
 API_APPLICATION_ID = 7
 
 _LOGGER = logging.getLogger(__name__)
@@ -20,7 +21,8 @@ class Api:
     def get_session(self, email, password):
         response = self._call_api(
             "post", 
-            API_AUTH_URL, 
+            API_AUTH_URL,
+            params = None,
             json = { 
                 'Email': email, 
                 'Password': password, 
@@ -30,7 +32,8 @@ class Api:
         return response
     
     def get_thermostats(self, sessionId):
-        thermostats = self._call_api("get", API_GET_THERMOSTATS_URL, sessionId).json()
+        params = { 'sessionId': sessionId }
+        thermostats = self._call_api("get", API_GET_THERMOSTATS_URL, params).json()
         groups = thermostats["Groups"]
 
         thermostat_list = []
@@ -39,8 +42,16 @@ class Api:
                 thermostat_list.append(Thermostat(thermostat))
 
         return thermostat_list
+    
+    def set_temperature(self, sessionId, serialNumber, temperature):
+        modifiedTemp = temperature * 100
+        params = { 'sessionId': sessionId, 'serialnumber': serialNumber }
+        json = { 'ManualTemperature': modifiedTemp, "RegulationMode": 3, "VacationEnabled": False}
+        result = self._call_api("post", API_SET_TEMPERATURE_URL, params = params, json = json).json()
+        
+        return result["Success"]
 
-    def _call_api(self, method, url, sessionId = None, **kwargs):
+    def _call_api(self, method, url, params, **kwargs):
         payload = kwargs.get("params") or kwargs.get("json")
 
         if "timeout" not in kwargs:
@@ -48,9 +59,9 @@ class Api:
         
         _LOGGER.debug("Calling %s with payload=%s", url, payload)
 
-        response = self._http_session.request(method, url, params = { 'sessionId': sessionId }, **kwargs) if\
+        response = self._http_session.request(method, url, params = params, **kwargs) if\
             self._http_session is not None else\
-            request(method, url, params = { 'sessionId': sessionId }, **kwargs)
+            request(method, url, params = params, **kwargs)
 
         _LOGGER.debug("API Response received: %s - %s", response.status_code, response.content)
 
