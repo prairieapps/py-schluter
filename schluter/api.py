@@ -44,7 +44,7 @@ class Api:
         return thermostat_list
     
     def set_temperature(self, sessionId, serialNumber, temperature):
-        modifiedTemp = temperature * 100
+        modifiedTemp = int(temperature * 100)
         params = { 'sessionId': sessionId, 'serialnumber': serialNumber }
         json = { 'ManualTemperature': modifiedTemp, "RegulationMode": 3, "VacationEnabled": False}
         result = self._call_api("post", API_SET_TEMPERATURE_URL, params = params, json = json).json()
